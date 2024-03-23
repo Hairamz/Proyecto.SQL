@@ -54,6 +54,7 @@ CREATE TABLE Ventas (
     CANTIDADPRODUCTOS INT NOT NULL,
     PRECIOVENTA DECIMAL(10, 2) NOT NULL,
     NFACTURA VARCHAR(20) NOT NULL,
+    PRODUCTOS VARCHAR(45) NOT NULL,
     INDEX compradorindex (COMPRADOR),
     INDEX fechaindex (FECHACOMPRA)
 )ENGINE=InnoDB;
@@ -227,11 +228,35 @@ CREATE PROCEDURE RealizarVenta(
     IN fechaCompra DATE,
     IN cantidadProductos INT,
     IN precioVenta DECIMAL(10, 2),
-    IN nFactura VARCHAR(20)
+    IN nFactura VARCHAR(20),
+    IN productos VARCHAR(45)
 )
 BEGIN
-    INSERT INTO Ventas (COMPRADOR, FECHACOMPRA, CANTIDADPRODUCTOS, PRECIOVENTA, NFACTURA)
-    VALUES (comprador, fechaCompra, cantidadProductos, precioVenta, nFactura);
+    INSERT INTO Ventas (COMPRADOR, FECHACOMPRA, CANTIDADPRODUCTOS, PRECIOVENTA, NFACTURA, PRODURCTOS)
+    VALUES (comprador, fechaCompra, cantidadProductos, precioVenta, nFactura, productos);
 END //
 DELIMITER ;
 
+-- Triggers
+
+-- ActualizarPrecioPromedio
+
+DELIMITER //
+CREATE TRIGGER ActualizarPrecioPromedio AFTER INSERT ON Pedidos
+FOR EACH ROW
+BEGIN
+    DECLARE avgPrice DECIMAL(10, 2);
+    SELECT AVG(PRECIO) INTO avgPrice FROM Pedidos WHERE IDPRODUCTO = NEW.IDPRODUCTO;
+    UPDATE Productos SET PRECIO = avgPrice WHERE IDPRODUCTO = NEW.IDPRODUCTO;
+END //
+DELIMITER ;
+
+-- Registrar cada vez que se actualiza el precio de un producto:
+DELIMITER //
+CREATE TRIGGER RegistroActualizacionPrecioProducto AFTER UPDATE ON Productos
+FOR EACH ROW
+BEGIN
+    INSERT INTO Registro_Actualizaciones_Precio_Producto (IDPRODUCTO, NUEVO_PRECIO, FECHA_ACTUALIZACION)
+    VALUES (OLD.IDPRODUCTO, NEW.PRECIO, NOW());
+END //
+DELIMITER ;
